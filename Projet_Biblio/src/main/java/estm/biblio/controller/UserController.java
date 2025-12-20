@@ -6,6 +6,7 @@ import estm.biblio.service.BibliothequeService;
 import estm.biblio.view.LoginView;
 import estm.biblio.view.UserDashboard;
 import javax.swing.JOptionPane;
+import java.util.List;
 
 public class UserController {
     private UserDashboard v;
@@ -18,32 +19,42 @@ public class UserController {
         this.v = v;
         this.u = u;
 
-        load(); // Chargement initial des données
+        load();
+
+        v.addSearchListener(e -> {
+            String keyword = v.getSearchText();
+            List<Livre> resultats;
+
+            if (keyword.trim().isEmpty()) {
+
+                resultats = lDao.findAll();
+            } else {
+                resultats = lDao.search(keyword);
+            }
+
+            updateTableLivres(resultats);
+        });
 
         // --- ACTION : EMPRUNTER ---
         v.addEmprunterListener(e -> {
             String isbn = v.getSelectedIsbn();
 
-            // 1. Vérif sélection
             if (isbn == null) {
                 JOptionPane.showMessageDialog(v, "Veuillez sélectionner un livre dans la liste.");
                 return;
             }
 
-            // 2. Vérif sécurité (L'utilisateur doit être un Adhérent valide)
             if (u.getAdherentId() <= 0) {
                 JOptionPane.showMessageDialog(v, "Erreur critique : Compte non lié à un dossier étudiant.");
                 return;
             }
 
-            // 3. Confirmation
             int confirm = JOptionPane.showConfirmDialog(v, "Confirmer l'emprunt ?", "Emprunt", JOptionPane.YES_NO_OPTION);
 
             if (confirm == JOptionPane.YES_OPTION) {
-                // 4. Appel Service (Règles métier : Stock, Retard, Max 3)
                 String resultat = service.emprunterLivre(isbn, u.getAdherentId());
                 JOptionPane.showMessageDialog(v, resultat);
-                load(); // Rafraîchir
+                load(); // Rafraîchir tout (stock baissé, nouvel emprunt ajouté)
             }
         });
 
@@ -59,11 +70,19 @@ public class UserController {
     }
 
     private void load() {
-        v.modelLivres.setRowCount(0);
-        v.modelMesEmprunts.setRowCount(0);
 
-        for (Livre l : lDao.findAll()) {
-            String dispo = (l.getStock() > 0) ? "Disponible" : "Indisponible (Rupture)";
+        updateTableLivres(lDao.findAll());
+
+
+        if (u.getAdherentId() > 0) {
+            eDao.chargerMesEmprunts(u.getAdherentId(), v.modelMesEmprunts);
+        }
+    }
+
+    private void updateTableLivres(List<Livre> livres) {
+        v.modelLivres.setRowCount(0);
+        for (Livre l : livres) {
+            String dispo = (l.getStock() > 0) ? "Disponible (" + l.getStock() + ")" : "Indisponible";
             v.modelLivres.addRow(new Object[]{
                     l.getIsbn(),
                     l.getTitre(),
@@ -71,10 +90,6 @@ public class UserController {
                     l.getCategorie(),
                     dispo
             });
-        }
-
-        if (u.getAdherentId() > 0) {
-            eDao.chargerMesEmprunts(u.getAdherentId(), v.modelMesEmprunts);
         }
     }
 }

@@ -1,3 +1,3 @@
 Manifest-Version: 1.0
-Main-Class: C:\Users\m\Desktop\JAVA & UML\Projet\Projet_Biblio\src\main
+Main-Class: estm.biblio.App
 
