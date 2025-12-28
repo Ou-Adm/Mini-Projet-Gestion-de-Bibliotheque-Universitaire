@@ -8,7 +8,6 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 public class AdminDashboard extends JFrame {
 
@@ -18,20 +17,21 @@ public class AdminDashboard extends JFrame {
     private final Color TEXT_WHITE = new Color(240, 240, 240);
     private final Color BTN_BLUE = new Color(9, 132, 227);
     private final Color BTN_GREEN = new Color(0, 184, 148);
-    private final Color BTN_ORANGE = new Color(225, 112, 85); // Pour modif
+    private final Color BTN_ORANGE = new Color(225, 112, 85);
     private final Color BTN_RED = new Color(214, 48, 49);
+    private final Color BTN_PURPLE = new Color(108, 92, 231); // Pour l'import
 
     private JButton btnLogout = new JButton("Se Déconnecter");
 
     // ONGLET 1 : EMPRUNTS
-    // J'ajoute une colonne ID (Index 0) et ISBN (Index 3)
     public DefaultTableModel modelEmprunts = new DefaultTableModel(new String[]{"ID", "Emprunteur", "Livre", "ISBN", "Date Prêt", "Retour Prévu", "Statut"}, 0);
     private JTable tableEmprunts = new JTable(modelEmprunts);
-    private JButton btnRetourner = new JButton("Enregistrer Retour"); // NOUVEAU
+    private JButton btnRetourner = new JButton("Enregistrer Retour");
 
     // ONGLET 2 : LIVRES
-    private JTextField txtSearch = new JTextField(20); // NOUVEAU
-    private JButton btnSearch = new JButton("Rechercher"); // NOUVEAU
+    private JTextField txtSearch = new JTextField(20);
+    private JButton btnSearch = new JButton("Rechercher");
+    private JButton btnImportCsv = new JButton("Importer CSV"); // NOUVEAU BOUTON
 
     private JTextField txtIsbn = new JTextField(15);
     private JTextField txtTitre = new JTextField(15);
@@ -40,11 +40,11 @@ public class AdminDashboard extends JFrame {
     private JTextField txtStock = new JTextField(5);
 
     private JButton btnAddLivre = new JButton("Ajouter");
-    private JButton btnUpdLivre = new JButton("Modifier"); // NOUVEAU
+    private JButton btnUpdLivre = new JButton("Modifier");
     private JButton btnDelLivre = new JButton("Supprimer");
 
     public DefaultTableModel modelLivres = new DefaultTableModel(new String[]{"ISBN", "Titre", "Auteur", "Catégorie", "Stock"}, 0);
-    public JTable tableLivres = new JTable(modelLivres); // Public pour ajouter le listener
+    public JTable tableLivres = new JTable(modelLivres);
 
     // ONGLET 3 : COMPTES
     private JTextField txtNom = new JTextField(15);
@@ -55,7 +55,7 @@ public class AdminDashboard extends JFrame {
     private JComboBox<String> cbRole = new JComboBox<>(new String[]{"USER (Adhérent)", "ADMIN"});
 
     private JButton btnCreateAccount = new JButton("Créer");
-    private JButton btnUpdAccount = new JButton("Modifier Info"); // NOUVEAU
+    private JButton btnUpdAccount = new JButton("Modifier Info");
     private JButton btnDelAccount = new JButton("Supprimer");
 
     public DefaultTableModel modelComptes = new DefaultTableModel(new String[]{"ID", "Nom & Prénom", "Email", "Login", "Rôle"}, 0);
@@ -87,7 +87,7 @@ public class AdminDashboard extends JFrame {
         p1.add(new JScrollPane(tableEmprunts), BorderLayout.CENTER);
         JPanel p1Bot = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         p1Bot.setBackground(DARK_BG);
-        styleButton(btnRetourner, BTN_GREEN); // Bouton retour
+        styleButton(btnRetourner, BTN_GREEN);
         p1Bot.add(btnRetourner);
         p1.add(p1Bot, BorderLayout.SOUTH);
 
@@ -101,6 +101,12 @@ public class AdminDashboard extends JFrame {
         JLabel lblSearch = new JLabel("Rechercher :"); lblSearch.setForeground(TEXT_WHITE);
         p2Top.add(lblSearch); p2Top.add(txtSearch);
         styleButton(btnSearch, BTN_BLUE); p2Top.add(btnSearch);
+
+        // Ajout du bouton Import CSV en haut à droite
+        styleButton(btnImportCsv, BTN_PURPLE);
+        p2Top.add(Box.createHorizontalStrut(20)); // Espace
+        p2Top.add(btnImportCsv);
+
         p2.add(p2Top, BorderLayout.NORTH);
 
         // Formulaire (Gauche)
@@ -188,7 +194,8 @@ public class AdminDashboard extends JFrame {
     public void addAddLivreListener(ActionListener l) { btnAddLivre.addActionListener(l); }
     public void addUpdLivreListener(ActionListener l) { btnUpdLivre.addActionListener(l); }
     public void addDelLivreListener(ActionListener l) { btnDelLivre.addActionListener(l); }
-    public void addTableLivreMouseListener(MouseAdapter l) { tableLivres.addMouseListener(l); } // Pour remplir le formulaire au clic
+    public void addImportListener(ActionListener l) { btnImportCsv.addActionListener(l); } // NOUVEAU
+    public void addTableLivreMouseListener(MouseAdapter l) { tableLivres.addMouseListener(l); }
 
     public Livre getLivreForm() {
         try { return new Livre(txtIsbn.getText(), txtTitre.getText(), txtAuteur.getText(), (String)cbCategorie.getSelectedItem(), Integer.parseInt(txtStock.getText())); }

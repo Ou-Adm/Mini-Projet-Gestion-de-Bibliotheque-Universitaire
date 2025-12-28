@@ -2,11 +2,14 @@ package estm.biblio.controller;
 
 import estm.biblio.dao.*;
 import estm.biblio.model.*;
+import estm.biblio.service.BibliothequeService;
 import estm.biblio.view.AdminDashboard;
 import estm.biblio.view.LoginView;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.sql.ResultSet;
 import java.util.List;
 
@@ -16,6 +19,7 @@ public class AdminController {
     private AdherentDao aDao = new AdherentDao();
     private EmpruntDao eDao = new EmpruntDao();
     private UtilisateurDao uDao = new UtilisateurDao();
+    private BibliothequeService service = new BibliothequeService(); // Ajout du Service pour le CSV
 
     public AdminController(AdminDashboard v) {
         this.v = v;
@@ -31,12 +35,10 @@ public class AdminController {
 
             if (idEmprunt != -1 && isbn != null) {
                 if (JOptionPane.showConfirmDialog(v, "Confirmer le retour du livre ?") == 0) {
-
                     eDao.retourner(idEmprunt);
                     lDao.updateStock(isbn, 1);
-
                     JOptionPane.showMessageDialog(v, "Livre retourné avec succès.");
-                    load(); // Rafraîchir
+                    load();
                 }
             } else {
                 JOptionPane.showMessageDialog(v, "Veuillez sélectionner une ligne d'emprunt.");
@@ -44,8 +46,21 @@ public class AdminController {
         });
 
         // ==================================================
-        // 2. GESTION DES LIVRES (Ajout, Modif, Recherche)
+        // 2. GESTION DES LIVRES
         // ==================================================
+
+        // IMPORTER CSV
+        v.addImportListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileFilter(new FileNameExtensionFilter("Fichiers CSV", "csv"));
+            int res = chooser.showOpenDialog(v);
+            if (res == JFileChooser.APPROVE_OPTION) {
+                File file = chooser.getSelectedFile();
+                String resultat = service.importerCSV(file);
+                JOptionPane.showMessageDialog(v, resultat);
+                load();
+            }
+        });
 
         // AJOUTER
         v.addAddLivreListener(e -> {
@@ -56,30 +71,39 @@ public class AdminController {
             } else JOptionPane.showMessageDialog(v, "Erreur formattage (Stock doit être un entier).");
         });
 
-        // MODIFIER
+        // MODIFIER LIVRE
         v.addUpdLivreListener(e -> {
-            Livre l = v.getLivreForm(); // Récupère les données des champs
-            if(l != null) {
-                if(JOptionPane.showConfirmDialog(v, "Modifier le livre " + l.getIsbn() + " ?") == 0) {
-                    lDao.update(l);
-                    v.clearLivreForm();
-                    load();
+            Livre l = v.getLivreForm();
+            if(l != null && !l.getIsbn().isEmpty()) {
+                // Note : On ne peut modifier un livre que si l'ISBN reste le même (clé primaire).
+                if(JOptionPane.showConfirmDialog(v, "Modifier le livre (ISBN : " + l.getIsbn() + ") ?") == 0) {
+                    if (lDao.exists(l.getIsbn())) {
+                        lDao.update(l);
+                        v.clearLivreForm();
+                        load();
+                        JOptionPane.showMessageDialog(v, "Modification effectuée.");
+                    } else {
+                        JOptionPane.showMessageDialog(v, "Erreur : ISBN introuvable. Impossible de modifier l'identifiant unique.");
+                    }
                 }
+            } else {
+                JOptionPane.showMessageDialog(v, "Veuillez sélectionner un livre et remplir les champs.");
             }
         });
 
         v.addTableLivreMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 int row = v.tableLivres.getSelectedRow();
-                String isbn = (String)v.tableLivres.getValueAt(row, 0);
-                String titre = (String)v.tableLivres.getValueAt(row, 1);
-                String auteur = (String)v.tableLivres.getValueAt(row, 2);
-                String cat = (String)v.tableLivres.getValueAt(row, 3);
-                int stock = (int)v.tableLivres.getValueAt(row, 4);
-                v.setLivreForm(isbn, titre, auteur, cat, stock);
+                if (row != -1) {
+                    String isbn = (String)v.tableLivres.getValueAt(row, 0);
+                    String titre = (String)v.tableLivres.getValueAt(row, 1);
+                    String auteur = (String)v.tableLivres.getValueAt(row, 2);
+                    String cat = (String)v.tableLivres.getValueAt(row, 3);
+                    int stock = (int)v.tableLivres.getValueAt(row, 4);
+                    v.setLivreForm(isbn, titre, auteur, cat, stock);
+                }
             }
         });
-
 
         v.addSearchListener(e -> {
             String keyword = v.getSearchText();
@@ -89,7 +113,6 @@ public class AdminController {
             } else {
                 resultats = lDao.search(keyword);
             }
-
             v.modelLivres.setRowCount(0);
             for(Livre l : resultats) {
                 v.modelLivres.addRow(new Object[]{l.getIsbn(), l.getTitre(), l.getAuteur(), l.getCategorie(), l.getStock()});
@@ -101,6 +124,10 @@ public class AdminController {
             if(isbn!=null && JOptionPane.showConfirmDialog(v,"Supprimer ce livre ?")==0) { lDao.delete(isbn); load(); }
         });
 
+        // ==================================================
+        // 3. GESTION DES COMPTES (Admin)
+        // ==================================================
+
         v.addCreateAccountListener(e -> {
             Adherent a = v.getAdherentData();
             String login = v.getLogin(); String pass = v.getPass(); String role = v.getRole();
@@ -111,6 +138,7 @@ public class AdminController {
             if(id > 0) { uDao.save(login, pass, role, id); v.clearAccountForm(); load(); }
         });
 
+        // MODIFIER COMPTE
         v.addUpdAccountListener(e -> {
             int id = v.getSelectedAccountId();
             if(id != -1) {
@@ -119,25 +147,28 @@ public class AdminController {
                     aDao.update(id, a.getNom(), a.getPrenom(), a.getEmail());
                     v.clearAccountForm();
                     load();
+                    JOptionPane.showMessageDialog(v, "Compte mis à jour.");
                 }
             } else {
-                JOptionPane.showMessageDialog(v, "Sélectionnez un compte.");
+                JOptionPane.showMessageDialog(v, "Veuillez sélectionner un compte dans le tableau.");
             }
         });
 
         v.addTableAccountMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
                 int row = v.tableComptes.getSelectedRow();
-                String nomComplet = (String)v.tableComptes.getValueAt(row, 1);
-                String email = (String)v.tableComptes.getValueAt(row, 2);
-                String login = (String)v.tableComptes.getValueAt(row, 3);
-                String role = (String)v.tableComptes.getValueAt(row, 4);
+                if (row != -1) {
+                    String nomComplet = (String)v.tableComptes.getValueAt(row, 1);
+                    String email = (String)v.tableComptes.getValueAt(row, 2);
+                    String login = (String)v.tableComptes.getValueAt(row, 3);
+                    String role = (String)v.tableComptes.getValueAt(row, 4);
 
-                String[] names = nomComplet.split(" ", 2); // Séparer Nom Prénom
-                String nom = names[0];
-                String prenom = (names.length > 1) ? names[1] : "";
+                    String[] names = nomComplet.split(" ", 2);
+                    String nom = names[0];
+                    String prenom = (names.length > 1) ? names[1] : "";
 
-                v.setAccountForm(nom, prenom, email, login, role);
+                    v.setAccountForm(nom, prenom, email, login, role);
+                }
             }
         });
 
@@ -153,7 +184,7 @@ public class AdminController {
     }
 
     private void load() {
-        eDao.chargerTousLesEmprunts(v.modelEmprunts); // Charge aussi les ID
+        eDao.chargerTousLesEmprunts(v.modelEmprunts);
 
         v.modelLivres.setRowCount(0);
         for(Livre l : lDao.findAll()) {
