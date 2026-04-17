@@ -32,4 +32,4 @@ Ce projet est une application logicielle de gestion de bibliothèque universitai
 ### Étapes de lancement
 1. **Cloner le dépôt :**
    ```bash
-   git clone [https://github.com/Ou-Adm/Mini-Projet-Gestion-de-Bibliotheque-Universitaire.git](https://github.com/Ou-Adm/Mini-Projet-Gestion-de-Bibliotheque-Universitaire.git)
+   git clone [https://github.com/Ou-Adm/Gestion-de-Bibliotheque-Universitaire.git](https://github.com/Ou-Adm/Gestion-de-Bibliotheque-Universitaire.git)
